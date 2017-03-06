@@ -312,7 +312,8 @@ void Fastcgipp::Manager_base::handler()
                         else
                         {
                             requestLock.unlock();
-                            lock.unlock();
+                            if(lock)
+                                lock.unlock();
                         }
                     }
                 }
@@ -339,6 +340,8 @@ void Fastcgipp::Manager_base::handler()
 #endif
         requestsReadLock.lock();
     }
+    requestsReadLock.unlock();
+    tasksLock.unlock();
 }
 
 void Fastcgipp::Manager_base::push(Protocol::RequestId id, Message&& message)

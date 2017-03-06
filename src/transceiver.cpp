@@ -26,6 +26,8 @@
 * along with fastcgi++.  If not, see <http://www.gnu.org/licenses/>.           *
 *******************************************************************************/
 
+#include <thread>
+#include <chrono>
 #include "fastcgi++/transceiver.hpp"
 
 #include "fastcgi++/log.hpp"
@@ -47,6 +49,9 @@ bool Fastcgipp::Transceiver::transmit()
         if(sent>=0)
         {
             record->read += sent;
+            if (0 == sent) {
+              std::this_thread::sleep_for (std::chrono::milliseconds(1));
+            }
             if(record->read != record->data.cend())
             {
                 {

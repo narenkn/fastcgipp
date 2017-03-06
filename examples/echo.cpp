@@ -225,7 +225,7 @@ int main()
 {
     Fastcgipp::Manager<Echo> manager;
     manager.setupSignals();
-    manager.listen();
+    manager.listen("localhost", "9001");
     manager.start();
     manager.join();
 

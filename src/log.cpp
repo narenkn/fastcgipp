@@ -100,7 +100,7 @@ namespace Fastcgipp
 
 std::wostream* Fastcgipp::Logging::logstream(&std::wcerr);
 std::mutex Fastcgipp::Logging::mutex;
-bool Fastcgipp::Logging::suppress(false);
+bool Fastcgipp::Logging::suppress(true);
 std::wstring Fastcgipp::Logging::hostname(Fastcgipp::Logging::getHostname());
 std::wstring Fastcgipp::Logging::program(Fastcgipp::Logging::getProgram());
 

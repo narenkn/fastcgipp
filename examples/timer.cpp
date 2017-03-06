@@ -186,7 +186,7 @@ int main()
     Fastcgipp::Manager<Timer> manager(
             std::max(1u, unsigned(std::thread::hardware_concurrency()/2)));
     manager.setupSignals();
-    manager.listen();
+    manager.listen("localhost", "9001");
     manager.start();
     manager.join();
 

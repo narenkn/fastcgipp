@@ -102,10 +102,14 @@ ssize_t Fastcgipp::Socket::write(const char* buffer, size_t size) const
     const ssize_t count = ::send(m_data->m_socket, buffer, size, MSG_NOSIGNAL);
     if(count<0)
     {
+      if ((EAGAIN == errno) || (EWOULDBLOCK == errno)) {
+        return 0;
+      } else {
         WARNING_LOG("Socket write() error on fd " \
                 << m_data->m_socket << ": " << strerror(errno))
         close();
         return -1;
+      }
     }
 
 #if FASTCGIPP_LOG_LEVEL > 3
@@ -456,6 +460,7 @@ Fastcgipp::Socket Fastcgipp::SocketGroup::poll(bool block)
 
 #ifdef FASTCGIPP_LINUX
     epoll_event epollEvent;
+    std::memset(&epollEvent, 0, sizeof(epoll_event));
     const auto& pollIn = EPOLLIN;
     const auto& pollErr = EPOLLERR;
     const auto& pollHup = EPOLLHUP;
@@ -520,7 +525,7 @@ Fastcgipp::Socket Fastcgipp::SocketGroup::poll(bool block)
 
             if(m_listeners.find(socketId) != m_listeners.end())
             {
-                if(events == pollIn)
+              if(static_cast<unsigned>(pollIn) == static_cast<unsigned>(events))
                 {
                     createSocket(socketId);
                     continue;
@@ -535,7 +540,7 @@ Fastcgipp::Socket Fastcgipp::SocketGroup::poll(bool block)
             }
             else if(socketId == m_wakeSockets[1])
             {
-                if(events == pollIn)
+              if(static_cast<unsigned>(pollIn) == static_cast<unsigned>(events))
                 {
                     std::lock_guard<std::mutex> lock(m_wakingMutex);
                     char x[256];
@@ -645,6 +650,7 @@ bool Fastcgipp::SocketGroup::pollAdd(const socket_t socket)
 {
 #ifdef FASTCGIPP_LINUX
     epoll_event event;
+    std::memset(&event, 0, sizeof(epoll_event));
     event.data.fd = socket;
     event.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
     return epoll_ctl(m_poll, EPOLL_CTL_ADD, socket, &event) != -1;
