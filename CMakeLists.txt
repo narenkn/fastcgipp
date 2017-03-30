@@ -5,7 +5,7 @@ set(VERSION      "3.0beta")
 set(VERSION_MAJOR 3)
 string(TIMESTAMP BUILD_TIME UTC)
 
-option(BUILD_STATIC_LIBS "Set to on to build and install static library" OFF)
+option(BUILD_STATIC_LIBS "Set to on to build and install static library" ON)
 
 # Set up our log level for fastcgi++/log.hpp
 if(NOT LOG_LEVEL)
