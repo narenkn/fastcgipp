@@ -110,6 +110,10 @@ ssize_t Fastcgipp::Socket::write(const char* buffer, size_t size) const
         close();
         return -1;
       }
+    } else {
+//      for (ssize_t ui1=0; ui1<count; ui1++) {
+//	printf("%c", buffer[ui1]);
+//      }
     }
 
 #if FASTCGIPP_LOG_LEVEL > 3

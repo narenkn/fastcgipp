@@ -644,7 +644,7 @@ namespace Fastcgipp
             std::time_t m_cleanupTime;
 
             //! Actual container of sessions
-            std::map<SessionId, std::shared_ptr<const T>> m_sessions;
+            std::map<SessionId, std::shared_ptr<T>> m_sessions;
 
             //! Thread safe all operations
             mutable std::mutex m_mutex;
@@ -680,7 +680,7 @@ namespace Fastcgipp
              * @return Shared pointer to session data. The pointer will evaluate
              *         to false if the session does not actually exist.
              */
-            std::shared_ptr<const T> get(const SessionId& id);
+            std::shared_ptr<T> get(const SessionId& id);
 
             //! How many active sessions are there?
             size_t size() const
@@ -696,7 +696,7 @@ namespace Fastcgipp
              * @return A session ID for the session. This is not a reference for
              * thread safety purposes.
              */
-            SessionId generate(const std::shared_ptr<const T>& data);
+            SessionId generate(const std::shared_ptr<T>& data);
 
             //! Erase a session
             /*!
@@ -796,22 +796,22 @@ Out Fastcgipp::Http::base64Encode(In start, In end, Out destination)
 }
 
 template<class T> Fastcgipp::Http::SessionId
-Fastcgipp::Http::Sessions<T>::generate(const std::shared_ptr<const T>& data)
+Fastcgipp::Http::Sessions<T>::generate(const std::shared_ptr<T>& data)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     std::pair<
-            typename std::map<SessionId, std::shared_ptr<const T>>::iterator,
+            typename std::map<SessionId, std::shared_ptr<T>>::iterator,
             bool>
         retVal;
     retVal.second=false;
     while(!retVal.second)
-        retVal=m_sessions.insert(std::pair<SessionId, std::shared_ptr<const T>>(
+        retVal=m_sessions.insert(std::pair<SessionId, std::shared_ptr<T>>(
                     SessionId(),
                     data));
     return retVal.first->first;
 }
 
-template<class T> std::shared_ptr<const T>
+template<class T> std::shared_ptr<T>
 Fastcgipp::Http::Sessions<T>::get(const SessionId& id)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -844,7 +844,7 @@ Fastcgipp::Http::Sessions<T>::get(const SessionId& id)
         }
     }
 
-    return std::shared_ptr<const T>();
+    return std::shared_ptr<T>();
 }
 
 template<class T> void Fastcgipp::Http::Sessions<T>::setExpiration()
