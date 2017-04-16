@@ -310,17 +310,17 @@ namespace Fastcgipp
             std::time_t ifModifiedSince;
 
             //! Container with all url-encoded cookie data
-            std::multimap<
+            std::map<
                 std::basic_string<charT>,
                 std::basic_string<charT>> cookies;
 
             //! Container with all url-encoded GET data
-            std::multimap<
+            std::map<
                 std::basic_string<charT>,
                 std::basic_string<charT>> gets;
 
             //! Container of none-file POST data
-            std::multimap<
+            std::map<
                 std::basic_string<charT>,
                 std::basic_string<charT>> posts;
 
@@ -466,7 +466,7 @@ namespace Fastcgipp
         template<class charT> void decodeUrlEncoded(
                 std::vector<char>::const_iterator data,
                 const std::vector<char>::const_iterator dataEnd,
-                std::multimap<
+                std::map<
                     std::basic_string<charT>,
                     std::basic_string<charT>>& output,
                 const char* const fieldSeparator="&");
@@ -644,7 +644,8 @@ namespace Fastcgipp
             std::time_t m_cleanupTime;
 
             //! Actual container of sessions
-            std::map<SessionId, std::shared_ptr<T>> m_sessions;
+            std::map<std::string, std::shared_ptr<T>> m_sessions;
+	    std::map<std::string, SessionId> m_sessionids;
 
             //! Thread safe all operations
             mutable std::mutex m_mutex;
@@ -680,13 +681,21 @@ namespace Fastcgipp
              * @return Shared pointer to session data. The pointer will evaluate
              *         to false if the session does not actually exist.
              */
-            std::shared_ptr<T> get(const SessionId& id);
+            std::shared_ptr<T> get(const std::string& id);
 
             //! How many active sessions are there?
             size_t size() const
             {
                 std::lock_guard<std::mutex> lock(m_mutex);
                 return m_sessions.size();
+            }
+
+            //! How many active sessions are there?
+            void clear()
+            {
+                std::lock_guard<std::mutex> lock(m_mutex);
+                m_sessions.clear();
+                m_sessionids.clear();
             }
 
             //! Generates a new session
@@ -696,16 +705,17 @@ namespace Fastcgipp
              * @return A session ID for the session. This is not a reference for
              * thread safety purposes.
              */
-            SessionId generate(const std::shared_ptr<T>& data);
+            std::string generate(const std::shared_ptr<T>& data);
 
             //! Erase a session
             /*!
              * @param[in] id The session we want to erase.
              */
-            void erase(const SessionId& id)
+            void erase(const std::string& id)
             {
                 std::lock_guard<std::mutex> lock(m_mutex);
                 m_sessions.erase(id);
+		m_sessionids.erase(id);
             }
 
             //! Expiration string for setting cookies
@@ -713,6 +723,9 @@ namespace Fastcgipp
             {
                 return m_expirationPtr;
             }
+
+	    //! Cleanup routine to be called at regular intervals
+	    void tryCleanUp();
         };
     }
 }
@@ -795,56 +808,61 @@ Out Fastcgipp::Http::base64Encode(In start, In end, Out destination)
     return destination;
 }
 
-template<class T> Fastcgipp::Http::SessionId
+template<class T> std::string
 Fastcgipp::Http::Sessions<T>::generate(const std::shared_ptr<T>& data)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    std::pair<
-            typename std::map<SessionId, std::shared_ptr<T>>::iterator,
-            bool>
-        retVal;
-    retVal.second=false;
-    while(!retVal.second)
-        retVal=m_sessions.insert(std::pair<SessionId, std::shared_ptr<T>>(
-                    SessionId(),
-                    data));
-    return retVal.first->first;
+
+    /* create new session id */
+    SessionId sid{};
+    std::basic_ostringstream<T> ostr;
+    ostr << sid;
+    std::string sid_str{ostr.str()};
+    m_sessionids[sid_str] = sid;
+    m_sessions[sid_str] = data;
+
+    return sid_str;
 }
 
-template<class T> std::shared_ptr<T>
-Fastcgipp::Http::Sessions<T>::get(const SessionId& id)
+template<class T> void 
+Fastcgipp::Http::Sessions<T>::tryCleanUp()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+
     const std::time_t now = std::time(nullptr);
     const std::time_t oldest(now-m_keepAlive);
 
-    if(now >= m_cleanupTime)
-    {
-        auto session = m_sessions.begin();
-        while(session != m_sessions.end())
-        {
-            if(session->first.m_timestamp < oldest)
-                session = m_sessions.erase(session);
-            else
-                ++session;
-        }
+    if (now >= m_cleanupTime) {
+        auto idx = m_sessionids.begin();
+
+	for ( std::map<std::string, SessionId>::iterator itr = m_sessionids.begin();
+	      itr != m_sessionids.end(); ) {
+	  if( itr->second.m_timestamp < oldest )
+            itr = m_sessionids.erase(itr);
+	  else ++itr;
+	}
+
         m_cleanupTime = std::time(nullptr)+m_keepAlive;
         setExpiration();
     }
+}
 
-    const auto session = m_sessions.find(id);
-    if(session != m_sessions.cend())
-    {
-        if(session->first.m_timestamp < oldest)
-            m_sessions.erase(session);
-        else
-        {
-            session->first.refresh();
-            return session->second;
-        }
+template<class T> std::shared_ptr<T>
+Fastcgipp::Http::Sessions<T>::get(const std::string& id)
+{
+  {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    const auto sessionid = m_sessionids.find(id);
+    const auto sptr = m_sessions.find(id);
+
+    if (sessionid != m_sessionids.cend()) {
+      sessionid->second.refresh();
+      return sptr->second;
     }
+  }
 
-    return std::shared_ptr<T>();
+  return std::shared_ptr<T>();
 }
 
 template<class T> void Fastcgipp::Http::Sessions<T>::setExpiration()

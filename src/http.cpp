@@ -661,21 +661,21 @@ const size_t Fastcgipp::Http::SessionId::size;
 template void Fastcgipp::Http::decodeUrlEncoded<char>(
         std::vector<char>::const_iterator data,
         const std::vector<char>::const_iterator dataEnd,
-        std::multimap<
+        std::map<
             std::basic_string<char>,
             std::basic_string<char>>& output,
         const char* const fieldSeparator);
 template void Fastcgipp::Http::decodeUrlEncoded<wchar_t>(
         std::vector<char>::const_iterator data,
         const std::vector<char>::const_iterator dataEnd,
-        std::multimap<
+        std::map<
             std::basic_string<wchar_t>,
             std::basic_string<wchar_t>>& output,
         const char* const fieldSeparator);
 template<class charT> void Fastcgipp::Http::decodeUrlEncoded(
         std::vector<char>::const_iterator data,
         const std::vector<char>::const_iterator dataEnd,
-        std::multimap<
+        std::map<
             std::basic_string<charT>,
             std::basic_string<charT>>& output,
         const char* const fieldSeparator)
