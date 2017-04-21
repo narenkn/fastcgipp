@@ -32,6 +32,7 @@
 #include <string>
 #include <ostream>
 #include <istream>
+#include <sstream>
 #include <iterator>
 #include <cstring>
 #include <algorithm>
@@ -815,7 +816,7 @@ Fastcgipp::Http::Sessions<T>::generate(const std::shared_ptr<T>& data)
 
     /* create new session id */
     SessionId sid{};
-    std::basic_ostringstream<T> ostr;
+    std::ostringstream ostr;
     ostr << sid;
     std::string sid_str{ostr.str()};
     m_sessionids[sid_str] = sid;
